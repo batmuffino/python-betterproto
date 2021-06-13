@@ -582,9 +582,11 @@ class Message(ABC):
         # Set current field of each group after `__init__` has already been run.
         group_current: Dict[str, Optional[str]] = {}
         for field_name, meta in self._betterproto.meta_by_field_name.items():
-
             if meta.group:
                 group_current.setdefault(meta.group)
+            else:
+                _ = getattr(self,field_name)
+
 
             if self.__raw_get(field_name) != PLACEHOLDER:
                 # Found a non-sentinel value
