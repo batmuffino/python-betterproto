@@ -63,7 +63,8 @@ FIXED_TYPES = [
 ]
 
 # Fields that are numerical 64-bit types
-INT_64_TYPES = [TYPE_INT64, TYPE_UINT64, TYPE_SINT64, TYPE_FIXED64, TYPE_SFIXED64]
+INT_64_TYPES = [TYPE_INT64, TYPE_UINT64,
+                TYPE_SINT64, TYPE_FIXED64, TYPE_SFIXED64]
 
 # Fields that are efficiently packed when
 PACKED_TYPES = [
@@ -128,7 +129,11 @@ class Casing(enum.Enum):
     SNAKE = snake_case  #: A snake_case sterilization function.
 
 
-PLACEHOLDER: Any = object()
+class BESTPLACEHOLDEREVER:
+    pass
+
+
+PLACEHOLDER: Any = BESTPLACEHOLDEREVER
 
 
 @dataclasses.dataclass(frozen=True)
@@ -275,7 +280,8 @@ class Enum(enum.IntEnum):
         try:
             return cls._member_map_[name]  # type: ignore
         except KeyError as e:
-            raise ValueError(f"Unknown value {name} for enum {cls.__name__}") from e
+            raise ValueError(
+                f"Unknown value {name} for enum {cls.__name__}") from e
 
 
 def _pack_fmt(proto_type: str) -> str:
@@ -460,13 +466,13 @@ def parse_fields(value: bytes) -> Generator[ParsedField, None, None]:
         if wire_type == WIRE_VARINT:
             decoded, i = decode_varint(value, i)
         elif wire_type == WIRE_FIXED_64:
-            decoded, i = value[i : i + 8], i + 8
+            decoded, i = value[i: i + 8], i + 8
         elif wire_type == WIRE_LEN_DELIM:
             length, i = decode_varint(value, i)
-            decoded = value[i : i + length]
+            decoded = value[i: i + length]
             i += length
         elif wire_type == WIRE_FIXED_32:
-            decoded, i = value[i : i + 4], i + 4
+            decoded, i = value[i: i + 4], i + 4
 
         yield ParsedField(
             number=number, wire_type=wire_type, value=decoded, raw=value[start:i]
@@ -585,8 +591,7 @@ class Message(ABC):
             if meta.group:
                 group_current.setdefault(meta.group)
             else:
-                _ = getattr(self,field_name)
-
+                _ = getattr(self, field_name)
 
             if self.__raw_get(field_name) != PLACEHOLDER:
                 # Found a non-sentinel value
@@ -715,7 +720,8 @@ class Message(ABC):
 
             # Empty messages can still be sent on the wire if they were
             # set (or received empty).
-            serialize_empty = isinstance(value, Message) and value._serialized_on_wire
+            serialize_empty = isinstance(
+                value, Message) and value._serialized_on_wire
 
             include_default_value_for_oneof = self._include_default_value_for_oneof(
                 field_name=field_name, meta=meta
@@ -758,7 +764,8 @@ class Message(ABC):
                     assert meta.map_types
                     sk = _serialize_single(1, meta.map_types[0], k)
                     sv = _serialize_single(2, meta.map_types[1], v)
-                    output += _serialize_single(meta.number, meta.proto_type, sk + sv)
+                    output += _serialize_single(meta.number,
+                                                meta.proto_type, sk + sv)
             else:
                 # If we have an empty string and we're including the default value for
                 # a oneof, make sure we serialize it. This ensures that the byte string
@@ -884,7 +891,8 @@ class Message(ABC):
                     value = cls().parse(value)
                     value._serialized_on_wire = True
             elif meta.proto_type == TYPE_MAP:
-                value = self._betterproto.cls_by_field[field_name]().parse(value)
+                value = self._betterproto.cls_by_field[field_name]().parse(
+                    value)
 
         return value
 
@@ -892,7 +900,8 @@ class Message(ABC):
         self, field_name: str, meta: FieldMetadata
     ) -> bool:
         return (
-            meta.group is not None and self._group_current.get(meta.group) == field_name
+            meta.group is not None and self._group_current.get(
+                meta.group) == field_name
         )
 
     def parse(self: T, data: bytes) -> T:
@@ -928,10 +937,10 @@ class Message(ABC):
                 value = []
                 while pos < len(parsed.value):
                     if meta.proto_type in (TYPE_FLOAT, TYPE_FIXED32, TYPE_SFIXED32):
-                        decoded, pos = parsed.value[pos : pos + 4], pos + 4
+                        decoded, pos = parsed.value[pos: pos + 4], pos + 4
                         wire_type = WIRE_FIXED_32
                     elif meta.proto_type in (TYPE_DOUBLE, TYPE_FIXED64, TYPE_SFIXED64):
-                        decoded, pos = parsed.value[pos : pos + 8], pos + 8
+                        decoded, pos = parsed.value[pos: pos + 8], pos + 8
                         wire_type = WIRE_FIXED_64
                     else:
                         decoded, pos = decode_varint(parsed.value, pos)
@@ -1017,7 +1026,8 @@ class Message(ABC):
                             field_name=field_name, meta=meta
                         )
                     ):
-                        output[cased_name] = _Timestamp.timestamp_to_json(value)
+                        output[cased_name] = _Timestamp.timestamp_to_json(
+                            value)
                 elif isinstance(value, timedelta):
                     if (
                         value != timedelta(0)
@@ -1034,7 +1044,8 @@ class Message(ABC):
                     # Convert each item.
                     cls = self._betterproto.cls_by_field[field_name]
                     if cls == datetime:
-                        value = [_Timestamp.timestamp_to_json(i) for i in value]
+                        value = [_Timestamp.timestamp_to_json(
+                            i) for i in value]
                     elif cls == timedelta:
                         value = [_Duration.delta_to_json(i) for i in value]
                     else:
@@ -1050,11 +1061,13 @@ class Message(ABC):
                         field_name=field_name, meta=meta
                     )
                 ):
-                    output[cased_name] = value.to_dict(casing, include_default_values)
+                    output[cased_name] = value.to_dict(
+                        casing, include_default_values)
             elif meta.proto_type == TYPE_MAP:
                 for k in value:
                     if hasattr(value[k], "to_dict"):
-                        value[k] = value[k].to_dict(casing, include_default_values)
+                        value[k] = value[k].to_dict(
+                            casing, include_default_values)
 
                 if value or include_default_values:
                     output[cased_name] = value
@@ -1083,7 +1096,8 @@ class Message(ABC):
                         if isinstance(value, typing.Iterable) and not isinstance(
                             value, str
                         ):
-                            output[cased_name] = [enum_class(el).name for el in value]
+                            output[cased_name] = [
+                                enum_class(el).name for el in value]
                         else:
                             # transparently upgrade single value to repeated
                             output[cased_name] = [enum_class(value).name]
